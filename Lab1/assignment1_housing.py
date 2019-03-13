@@ -44,12 +44,12 @@ y = train.SalePrice
 X_train = StandardScaler().fit_transform(X_train)
 
 X_tr, X_val, y_tr, y_val = train_test_split(X_train, y, random_state = 3)
+feature_len = X_tr.shape[1]
 
-#START CODE HERE
+model = Sequential()
+model.add(Dense(1, input_dim=feature_len, kernel_initializer='normal', kernel_regularizer=l1(.1)))
 
-#END CODE HERE
-
-model.compile(loss = "mse", optimizer = "adam")
+model.compile(loss = 'mean_squared_logarithmic_error', optimizer = 'Adamax')
 model.summary()
 
 hist = model.fit(X_tr, y_tr, validation_data = (X_val, y_val), epochs = 150)
