@@ -30,7 +30,8 @@ def clip(gradients, maxValue):
    
     ### START CODE HERE ###
     # clip to mitigate exploding gradients, loop over [dWax, dWaa, dWya, db, dby].
-
+    for grad in [dWax, dWaa, dWya, db, dby]:
+        grad = np.clip(grad, -1 * maxValue, maxValue, grad)
     ### END CODE HERE ###
     
     gradients = {"dWaa": dWaa, "dWax": dWax, "dWya": dWya, "db": db, "dby": dby}
@@ -73,30 +74,34 @@ def sample(parameters, char_to_ix, seed):
     
     ### START CODE HERE ###
     # Step 1: Create the one-hot vector x for the first character (initializing the sequence generation).
-
+    x = np.zeros((vocab_size, 1))
     # Step 1': Initialize a_prev as zeros 
-    
+    a_prev = np.zeros((n_a, 1))
     # Create an empty list of indices, this is the list which will contain the list of indices of the characters to generate (â‰ˆ1 line)
-    
+    indices = []
     # Idx is a flag to detect a newline character, we initialize it to -1
-    
+    idx = -1
     # Loop over time-steps t. At each time-step, sample a character from a probability distribution and append 
     # its index to "indices". We'll stop if we reach 50 characters (which should be very unlikely with a well 
-    # trained model), which helps debugging and prevents entering an infinite loop. 
-            
+    # trained model), which helps debugging and prevents entering an infinite loop.
+    counter = 0
+    while counter < 50 and idx != char_to_ix['\n']:    
         # Step 2: Forward propagate x using the equations (1), (2) and (3)
-        
+        a = np.tanh(np.dot(Wax, x) + np.dot(Waa, a_prev) + b)
+        z = np.dot(Wya, a) + by
+        y = softmax(z)
         # for grading purposes
         np.random.seed(counter + seed) 
         
         # Step 3: Sample the index of a character within the vocabulary from the probability distribution y
-
+        idx = np.random.choice(vocab_size,p=y.ravel())
         # Append the index to "indices"
-        
+        indices.append(idx)
         # Step 4: Overwrite the input character as the one corresponding to the sampled index.
-        
+        x = np.zeros((vocab_size, 1))
+        x[idx] = 1
         # Update "a_prev" to be "a"
-        
+        a_prev = a
         # for grading purposes
         seed += 1
         counter +=1
@@ -152,13 +157,13 @@ def optimize(X, Y, a_prev, parameters, learning_rate = 0.01):
     ### START CODE HERE ###
     
     # Forward propagate through time
-    
+    loss, cache = rnn_forward(X, Y, a_prev, parameters)
     # Backpropagate through time
-    
+    gradients, a = rnn_backward(X, Y, parameters, cache)
     # Clip your gradients between -5 (min) and 5 (max)
-    
+    gradients = clip(gradients, 5)
     # Update parameters
-    
+    parameters = update_parameters(parameters, gradients, learning_rate)
     ### END CODE HERE ###
     
     return loss, gradients, a[len(X)-1]
@@ -227,10 +232,11 @@ def model(data, ix_to_char, char_to_ix, num_iterations = 35000, n_a = 50, dino_n
         ### START CODE HERE ###
         
         # Use the hint above to define one training example (X,Y) (â‰ˆ 2 lines)
-        
+        X = [None] + [char_to_ix[ch] for ch in examples[j % len(examples)]]
+        Y = X[1:] + [char_to_ix['\n']]
         # Perform one optimization step: Forward-prop -> Backward-prop -> Clip -> Update parameters
         # Choose a learning rate of 0.01
-        
+        cur_loss, gradients, a = optimize(X, Y, a_prev, parameters, .01)
         ### END CODE HERE ###
         
         # Use a latency trick to keep the loss smooth. It happens here to accelerate the training.
